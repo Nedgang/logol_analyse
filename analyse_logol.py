@@ -15,6 +15,7 @@ options:
     --position -p=<name>     Return a file containing position of each motif
     --result -r=<name>       Save a fasta file with the matched sequences.
     --signature, -s=<name>   Create a file with for each sequences the hits.
+    --hits, -t               Display a hits/sequences graph.
     --version, -v            Maybe it's a trap ^^
     --xclude, -x=<name>      Create a file containing all unmatched sequences
 
@@ -42,21 +43,27 @@ if __name__ == '__main__':
 # MAIN #
 ########
 def __main__(arguments):
-    total = 0
-    count = 0
-    hit   = []
-    se    = set()  # Contain sequences header
+    total        = 0
+    count        = 0
+    hit          = []
+    se           = set()  # Contain sequences header
+    hits_per_seq = []
     # Here we check all the .xml file
     for f in glob.glob(os.getcwd()+"/"+arguments['<input>']+"*.xml"):
+        nb_hit = 0
         total += 1
         tree = etree.parse(f)
         # Collect of the hit beginning and ID
         for seq in tree.xpath("/sequences/match/begin"):
             count += 1
+            nb_hit +=1
             hit.append(int(seq.text)-int(arguments['--origin']))
             [se.add(a.text) for a in tree.xpath("/sequences/fastaHeader")]
+        if nb_hit > 0:
+            hits_per_seq.append(nb_hit)
     print("Nombre de hits: "+str(count))
     print("Nombre de séquences touchées: "+str(len(se))+" sur "+str(total))
+    print("Nombre max de hits par séquences: "+str(max(hits_per_seq)))
     if arguments['--result'] != None:
         seq_match(se)
     if arguments['--xclude'] != None:
@@ -67,6 +74,8 @@ def __main__(arguments):
         save_signature()
     if arguments['--position'] != None:
         save_position()
+    if arguments['--hits'] != False:
+        display_hits(hits_per_seq)
 
 #############
 # FUNCTIONS #
@@ -142,6 +151,13 @@ def save_position():
         pos.write(iD[i]+"\t"+begin[i]+"\t"+seq[i]+"\t"+end[i]+"\n")
         i += 1
     pos.close()
+
+def display_hits(hits_per_seq):
+    plt.hist(hits_per_seq, range(min(hits_per_seq), max(hits_per_seq)))
+    plt.xticks(range(min(hits_per_seq), max(hits_per_seq), 1))
+    plt.xlabel("Nombre de hits par séquences")
+    plt.ylabel("Nombre de séquences")
+    plt.show()
 
 ##########
 # LAUNCH #
